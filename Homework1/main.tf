@@ -23,19 +23,19 @@ provider "aws" {
 # DATA
 ##################################################################################
 
-data "aws_ami" "aws-linux" {
+data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["amzn-ami-hvm*"]
-  }
+  owners      = ["099720109477"]
 
   filter {
     name   = "root-device-type"
     values = ["ebs"]
   }
+  
+   filter {
+        name   = "name"
+        values = ["ubuntu/images/hvm-ssd/ubuntu-*-18.04-amd64-server-*"]
+    }
 
   filter {
     name   = "virtualization-type"
@@ -83,7 +83,7 @@ resource "aws_security_group" "allow_ssh_and_http" {
 
 resource "aws_instance" "nginx" {
   count                  = var.instance_count
-  ami                    = data.aws_ami.aws-linux.id
+  ami                    = data.aws_ami.ubuntu.id
   instance_type          = "t2.medium"
   availability_zone      = data.aws_availability_zones.available.names[count.index % var.instance_count]
   key_name               = var.key_name
@@ -93,7 +93,7 @@ resource "aws_instance" "nginx" {
   connection {
     type        = "ssh"
     host        = self.public_ip
-    user        = "ec2-user"
+    user        = "ubuntu"
     private_key = file(var.private_key_path)
 
   }
@@ -114,9 +114,9 @@ resource "aws_instance" "nginx" {
 
   provisioner "remote-exec" {
     inline = [
-      "sudo yum install nginx -y",
-      "sudo service nginx start",
-      "echo '<html><head><title>OpsSchool Rules</title></head><body style=\"background-color:#1F778D\"><p style=\"text-align: center;\"><span style=\"color:#FFFFFF;\"><span style=\"font-size:28px;\">OpsSchool Rules</span></span></p></body></html>' | sudo tee /usr/share/nginx/html/index.html"
+      "sudo apt-get update",
+      "sudo apt-get install nginx -y",
+      "echo '<html><head><title>OpsSchool Rules</title></head><body style=\"background-color:#1F778D\"><p style=\"text-align: center;\"><span style=\"color:#FFFFFF;\"><span style=\"font-size:28px;\">OpsSchool Rules</span></span></p></body></html>' | sudo tee /var/www/html/index.nginx-debian.html"
     ]
   }
 }

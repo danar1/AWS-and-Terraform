@@ -104,7 +104,7 @@ resource "aws_instance" "nginx" {
   }
 
   ebs_block_device {
-    device_name = "/dev/xvdb"
+    device_name = "/dev/sda2"
     volume_type = "gp2"
     volume_size = "10"
     encrypted = true

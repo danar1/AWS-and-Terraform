@@ -6,7 +6,7 @@ terraform {
   required_version = "0.13.4"
   required_providers {
     aws = {
-      source = "hashicorp/aws"
+      source  = "hashicorp/aws"
       version = "3.11.0"
     }
   }
@@ -46,48 +46,51 @@ data "aws_ami" "ubuntu" {
 resource "aws_vpc" "vpc" {
   cidr_block = var.vpc_cidr
 
-  tags       = local.common_tags
+  tags       = merge(local.common_tags, map("Name", "ops-vpc"))  
 }
 
 # public subnets
 resource "aws_subnet" "public" {
-  count                   = length(var.public_subnets)
+  count                   = local.public_subnet_count
   vpc_id                  = aws_vpc.vpc.id
-  cidr_block              = var.public_subnets[count.index]
+  cidr_block              = cidrsubnet(var.vpc_cidr, 8, count.index + 1)
   availability_zone       = element(var.azs, count.index)
   map_public_ip_on_launch = true
 
-  tags                    = local.common_tags
+  tags                    = merge(local.common_tags, map("Name", "ops-public"))  
 }
 
 # private subnets
 resource "aws_subnet" "private" {
-  count                   = length(var.private_subnets)
+  count                   = local.private_subnet_count
   vpc_id                  = aws_vpc.vpc.id
-  cidr_block              = var.private_subnets[count.index]
+  cidr_block              = cidrsubnet(var.vpc_cidr, 8, (count.index + 1) * 100)
   availability_zone       = element(var.azs, count.index)
 
-  tags                    = local.common_tags
+  tags                    = merge(local.common_tags, map("Name", "ops-private"))  
 }
 
 # IGW
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.vpc.id
 
-  tags   = local.common_tags
+  tags   = merge(local.common_tags, map("Name", "ops-gw"))  
 }
 
 # EIP 
 resource "aws_eip" "nat" {
+  count  = local.public_subnet_count
   vpc    = true
+  tags   = merge(local.common_tags, map("Name", "ops-eip"))  
 }
 
 # Nat GW
 resource "aws_nat_gateway" "nat-gw" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public.*.id[0]
+  count         = local.public_subnet_count
+  allocation_id = aws_eip.nat.*.id[count.index]
+  subnet_id     = aws_subnet.public.*.id[count.index]
 
-  tags          = local.common_tags
+  tags          = merge(local.common_tags, map("Name", "ops-nat-gw"))  
   depends_on    = [aws_internet_gateway.gw]
 }
 
@@ -100,33 +103,34 @@ resource "aws_route_table" "route_table_public" {
     gateway_id = aws_internet_gateway.gw.id
   }
 
-  tags   = local.common_tags
+  tags         = merge(local.common_tags, map("Name", "ops-rt-public"))  
 }
 
 # Route table for private subnets
 resource "aws_route_table" "route_table_private" {
+  count       = local.private_subnet_count
   vpc_id      = aws_vpc.vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.nat-gw.id
+    gateway_id = aws_nat_gateway.nat-gw.*.id[count.index]
   }
 
-  tags   = local.common_tags
+  tags         = merge(local.common_tags, map("Name", "ops-rt-private"))  
 }
 
 # Route table for publis subnet - assocoate to the public subnet
 resource "aws_route_table_association" "route_table_association_public" {
-  count          = length(var.public_subnets)
+  count          = local.public_subnet_count
   subnet_id      = aws_subnet.public.*.id[count.index]
   route_table_id = aws_route_table.route_table_public.id
 }
 
 # Route table for private subnet - assocoate to the private subnet
 resource "aws_route_table_association" "route_table_association_private" {
-  count          = length(var.private_subnets)
+  count          = local.private_subnet_count
   subnet_id      = aws_subnet.private.*.id[count.index]
-  route_table_id = aws_route_table.route_table_private.id
+  route_table_id = aws_route_table.route_table_private.*.id[count.index]
 }
 
 # Security Groups [web, db, alb]
@@ -154,6 +158,8 @@ resource "aws_security_group" "sg-web" {
     protocol    = -1
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags          = merge(local.common_tags, map("Name", "ops-sg-web"))  
 }
 
 # sg db
@@ -175,6 +181,8 @@ resource "aws_security_group" "sg-db" {
     protocol    = -1
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags          = merge(local.common_tags, map("Name", "ops-sg-db"))  
 }
 
 # sg ALB
@@ -196,6 +204,8 @@ resource "aws_security_group" "sg-lb" {
     protocol    = -1
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags          = merge(local.common_tags, map("Name", "ops-sg-lb"))  
 }
 
 # Instances [web, db]
@@ -208,7 +218,7 @@ resource "aws_instance" "web" {
   key_name               = aws_key_pair.key_pair.key_name
   vpc_security_group_ids = [aws_security_group.sg-web.id]
   user_data_base64       = base64encode(local.user_data)
-  tags = local.common_tags
+  tags                   = merge(local.common_tags, map("Name", "ops-web"))  
 
 
   connection {
@@ -228,7 +238,7 @@ resource "aws_instance" "db" {
   subnet_id              = aws_subnet.private[count.index].id
   key_name               = aws_key_pair.key_pair.key_name
   vpc_security_group_ids = [aws_security_group.sg-db.id]
-  tags = local.common_tags
+  tags                   = merge(local.common_tags, map("Name", "ops-db"))  
 
 }
 
@@ -240,7 +250,7 @@ resource "aws_lb" "alb" {
   security_groups    = [aws_security_group.sg-lb.id]
   subnets            = aws_subnet.public.*.id
 
-  tags = local.common_tags
+  tags               = merge(local.common_tags, map("Name", "ops-alb"))  
 }
 
 # Target group
@@ -260,6 +270,8 @@ resource "aws_lb_target_group" "target-group" {
       timeout             = lookup(var.health_check, "timeout", 5)
       protocol            = lookup(var.health_check, "protocol", "HTTP")
     }
+  
+  tags                    = merge(local.common_tags, map("Name", "ops-tg"))  
 }
 
 # Attach targets to target group 
@@ -280,5 +292,5 @@ resource "aws_lb_listener" "lb-listener" {
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.target-group.arn
-  }
+  } 
 }

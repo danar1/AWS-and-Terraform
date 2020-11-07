@@ -17,17 +17,6 @@ variable "vpc_cidr" {
   default = "10.0.0.0/16"
 }
 
-variable "public_subnets" {
-  type    = list(string)
-  default = ["10.0.1.0/24", "10.0.2.0/24"]
-}
-
-variable "private_subnets" {
-  type    = list(string)
-  default = ["10.0.100.0/24", "10.0.200.0/24"]
-}
-
-
 variable "health_check" {
   type    = map(any)
   default = {
@@ -52,8 +41,10 @@ locals {
     Owner     = "dana"
   }
 
-  public_instance_count  = length(var.public_subnets)
-  private_instance_count = length(var.private_subnets)
+  public_instance_count  = 2
+  private_instance_count = 2
+  public_subnet_count    = length(var.azs)
+  private_subnet_count   = length(var.azs)
 
   user_data = <<EOF
 #!/bin/bash

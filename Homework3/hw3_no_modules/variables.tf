@@ -62,12 +62,4 @@ locals {
   public_subnet_count    = length(var.azs)
   private_subnet_count   = length(var.azs)
 
-#   user_data = <<EOF
-# #!/bin/bash
-# sudo apt-get update
-# sudo apt-get install nginx -y
-# echo '<html><head><title>OpsSchool Rules</title></head><body style=\"background-color: purple\"><p style=\"text-align: center;\"><span style=\"color:#FFFFFF;\"><span style=\"font-size:28px;\">OpsSchool Rules</span></span></p></body></html>' | sudo tee /var/www/html/index.nginx-debian.html
-# EOF
-# }
-
 }

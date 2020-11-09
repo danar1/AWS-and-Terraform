@@ -10,7 +10,7 @@ output "web_servers_private_ip" {
     value = aws_instance.web.*.private_ip
 }
 
-# output "db_servers_private_ip" {
-#     value = aws_instance.db.*.private_ip
-# }
+output "db_servers_private_ip" {
+    value = aws_instance.db.*.private_ip
+}
 

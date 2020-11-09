@@ -353,14 +353,6 @@ resource "aws_lb_listener" "lb-listener" {
 ##################################################################################
 
 # S3 bucket
-data "aws_s3_bucket" "s3-bucket" {
-  bucket = var.bucket
-  # acl    = "private"
-
-  # tags   = merge(local.common_tags, map("Name", "ops-bucket"))  
-}
-
-# S3 bucket
 resource "aws_s3_bucket" "s3-bucket" {
   bucket = var.bucket
   acl    = "private"

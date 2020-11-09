@@ -266,10 +266,8 @@ EOF
 
   provisioner "remote-exec" {
     inline = [
-      "sudo cp /home/ubuntu/nginx /etc/logrotate.d/nginx"
-      # "sudo pip install s3cmd",
-      # "sudo mv /etc/cron.daily/logrotate /etc/cron.hourly/",
-      # "sudo logrotate -f /etc/logrotate.conf"
+      "sudo cp /home/ubuntu/nginx /etc/logrotate.d/nginx-new"
+      
 
     ]
   }

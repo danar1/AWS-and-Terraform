@@ -5,7 +5,7 @@
 
 # vpc
 resource "aws_vpc" "vpc" {
-  cidr_block = var.vpc_cidr
+  cidr_block = var.cidr_block
 
   tags       = merge(var.tags, var.vpc_tags)
 }
@@ -14,7 +14,7 @@ resource "aws_vpc" "vpc" {
 resource "aws_subnet" "public" {
   count                   = local.public_subnet_count
   vpc_id                  = aws_vpc.vpc.id
-  cidr_block              = cidrsubnet(var.vpc_cidr, 8, count.index + 1)
+  cidr_block              = cidrsubnet(var.cidr_block, 8, count.index + 1)
   availability_zone       = element(var.azs, count.index)
   map_public_ip_on_launch = true
 
@@ -25,7 +25,7 @@ resource "aws_subnet" "public" {
 resource "aws_subnet" "private" {
   count                   = local.private_subnet_count
   vpc_id                  = aws_vpc.vpc.id
-  cidr_block              = cidrsubnet(var.vpc_cidr, 8, (count.index + 1) * 100)
+  cidr_block              = cidrsubnet(var.cidr_block, 8, (count.index + 1) * 100)
   availability_zone       = element(var.azs, count.index)
 
   tags                    = merge(var.tags, var.private_subnet_tags)

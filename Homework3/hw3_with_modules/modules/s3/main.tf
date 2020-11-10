@@ -58,7 +58,6 @@ EOF
 
 }
 
-
 # Instance profile - Create instance profile with the ec2 iam role
 resource "aws_iam_instance_profile" "instance_profile" {
   name = "${var.role_name}_instance_profile"
